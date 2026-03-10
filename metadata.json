@@ -1,0 +1,5 @@
+{
+  "name": "ModernBlog Platform",
+  "description": "A production-ready blog platform built with NestJS, Prisma, and React. Features include JWT auth, background job processing with BullMQ, and optimized public feeds.",
+  "requestFramePermissions": []
+}

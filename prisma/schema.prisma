@@ -1,0 +1,101 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  password  String
+  role      Role      @default(USER)
+  
+  // Soft delete field
+  deletedAt DateTime?
+
+  // Relations
+  blogs     Blog[]
+  comments  Comment[]
+  likes     Like[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Blog {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  content     String    @db.Text
+  published   Boolean   @default(false)
+  
+  // Soft delete field
+  deletedAt   DateTime?
+
+  // Relations
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+  likes       Like[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Performance Indexes
+  @@index([authorId])
+  @@index([createdAt(sort: Desc)]) // Optimized for "Latest Posts" queries
+  @@index([slug])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  
+  // Relations
+  userId    String
+  blogId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  // Constraints & Indexes
+  @@unique([userId, blogId]) // Prevent duplicate likes (Business logic constraint)
+  @@index([blogId])          // Fast count of likes per blog
+  @@index([userId])          // Fast lookup of user's liked posts
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String    @db.Text
+  
+  // Soft delete field
+  deletedAt DateTime?
+
+  // Relations
+  authorId  String
+  blogId    String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  blog      Blog      @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Performance Indexes
+  @@index([blogId])          // Fast retrieval of comments for a specific blog
+  @@index([authorId])        // Fast retrieval of a user's comment history
+  @@index([createdAt])       // Optimized for chronological sorting
+}
